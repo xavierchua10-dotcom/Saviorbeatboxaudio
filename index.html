@@ -214,15 +214,6 @@
     border-top:1px solid var(--border);
     padding-bottom:env(safe-area-inset-bottom);
   }
-  .tab-pill{
-    position:absolute; top:6px; left:0; height:32px; width:52px;
-    border-radius:16px;
-    background:linear-gradient(90deg, var(--purple-2), var(--magenta));
-    opacity:.2;
-    transition:transform .3s cubic-bezier(.2,.8,.2,1);
-    pointer-events:none;
-    will-change:transform;
-  }
   .tab-panel{transition:opacity .16s ease, transform .16s ease; opacity:1; transform:translateY(0);}
   .tab-panel.tab-fade-out{opacity:0; transform:translateY(6px);}
   .tab-btn{
@@ -1036,7 +1027,6 @@
   </div>
 
   <nav class="bottom-tabbar" id="bottomTabbar" role="tablist">
-    <div class="tab-pill" id="tabPill" aria-hidden="true"></div>
     <button class="tab-btn active" data-tab="record" type="button" role="tab" aria-selected="true">
       <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 003-3V6a3 3 0 10-6 0v6a3 3 0 003 3z" stroke="currentColor" stroke-width="1.6"/><path d="M19 11a7 7 0 01-14 0M12 18v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <span>Record</span>
@@ -2314,23 +2304,6 @@
     if (btn) btn.disabled = false;
   }
 
-  // Sliding highlight behind the active bottom-tab icon. Reads the button's
-  // real position/width each time rather than trusting fixed percentages, so
-  // it stays correct across any viewport width without extra breakpoints.
-  function positionTabPill(){
-    const pill = $("tabPill");
-    const activeBtn = document.querySelector(".tab-btn.active");
-    const bar = $("bottomTabbar");
-    if (!pill || !activeBtn || !bar) return;
-    const btnRect = activeBtn.getBoundingClientRect();
-    const barRect = bar.getBoundingClientRect();
-    const centerX = (btnRect.left - barRect.left) + btnRect.width / 2;
-    const pillWidth = 52;
-    pill.style.width = pillWidth + "px";
-    pill.style.transform = "translateX(" + (centerX - pillWidth / 2) + "px)";
-  }
-  window.addEventListener("resize", positionTabPill);
-
   function switchTab(name){
     const targetBtn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
     if (!targetBtn || targetBtn.disabled) return;
@@ -2357,7 +2330,6 @@
       // and redraw once the Master tab is actually visible.
       if (name === "master" && audioBuffer){ resizeCanvases(); drawStaticWaveform(); }
       window.scrollTo({ top: 0, behavior: "smooth" });
-      positionTabPill();
     }
 
     if (currentPanel){
@@ -3337,7 +3309,6 @@
   ========================================================== */
   highlightPreset(activePresetName);
   syncUIFromState();
-  positionTabPill();
 
 })();
 </script>
