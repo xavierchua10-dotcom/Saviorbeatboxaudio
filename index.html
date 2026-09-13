@@ -294,6 +294,33 @@
     color:var(--purple-bright); font-weight:600; font-size:.88rem;
   }
   .about-link svg{width:20px; height:20px; flex:none;}
+  .save-preset-row{display:flex; gap:10px; margin-bottom:14px;}
+  .save-preset-row input{
+    flex:1; min-width:0; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-hi);
+    background:var(--bg-card); color:var(--text); font-size:.88rem;
+  }
+  .save-preset-row input::placeholder{color:var(--text-dimmer);}
+  .history-list{display:flex; flex-direction:column; gap:8px;}
+  .history-empty{color:var(--text-dimmer); font-size:.85rem; margin:6px 0 0;}
+  .history-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--bg-card);
+  }
+  .history-row-main{display:flex; flex-direction:column; min-width:0;}
+  .history-row-main strong{font-size:.9rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .history-row-main span{font-size:.7rem; color:var(--text-dimmer); margin-top:2px;}
+  .history-row-actions{display:flex; gap:8px; flex:none;}
+  .history-btn{
+    padding:7px 12px; border-radius:999px; border:1px solid var(--border-hi);
+    background:var(--bg-elevated); color:var(--text-dim); font-size:.76rem; font-weight:600;
+    cursor:pointer;
+  }
+  .history-btn.danger{color:var(--danger); border-color:var(--danger);}
+  .history-clear-btn{
+    margin-top:14px; padding:10px 16px; border-radius:var(--radius-sm); border:1px solid var(--border-hi);
+    background:none; color:var(--text-dim); font-size:.82rem; font-weight:600; cursor:pointer; width:100%;
+  }
 
   /* ---------- Bug report overlay links ---------- */
   .bug-links{display:flex; flex-direction:column; gap:14px; align-items:center;}
@@ -991,6 +1018,25 @@
 
   </div>
 
+  <div class="tab-panel" id="tabPanel-history" role="tabpanel" hidden>
+
+  <section class="panel" id="savedPresetsSection">
+    <h2><span class="num">H</span>Saved Presets</h2>
+    <div class="save-preset-row">
+      <input type="text" id="newPresetName" placeholder="Preset name" maxlength="40">
+      <button type="button" id="savePresetBtn" class="quick-action-btn">Save Current Chain</button>
+    </div>
+    <div id="customPresetList" class="history-list"></div>
+  </section>
+
+  <section class="panel" id="recentSessionsSection">
+    <h2><span class="num">H</span>Recent Sessions</h2>
+    <div id="sessionList" class="history-list"></div>
+    <button type="button" id="clearSessionsBtn" class="history-clear-btn">Clear History</button>
+  </section>
+
+  </div>
+
   <div class="tab-panel" id="tabPanel-settings" role="tabpanel" hidden>
 
   <section class="panel" id="aboutSection">
@@ -1034,6 +1080,10 @@
     <button class="tab-btn" data-tab="master" type="button" role="tab" aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none"><path d="M5 10v4M9 6v12M13 3v18M17 8v8M21 11v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <span>Master</span>
+    </button>
+    <button class="tab-btn" data-tab="history" type="button" role="tab" aria-selected="false">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>History</span>
     </button>
     <button class="tab-btn" data-tab="settings" type="button" role="tab" aria-selected="false">
       <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v3M12 18v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M3 12h3M18 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -2297,7 +2347,7 @@
   /* ==========================================================
      TABS — Record / Master / Export
   ========================================================== */
-  const TAB_ORDER = ["record", "master", "settings"];
+  const TAB_ORDER = ["record", "master", "history", "settings"];
 
   function enableTab(name){
     const btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
@@ -3035,6 +3085,133 @@
     btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
   });
 
+  /* ==========================================================
+     HISTORY — saved custom presets + recent render sessions.
+     Everything here lives only in this browser's localStorage;
+     nothing is ever sent anywhere.
+  ========================================================== */
+  const PRESET_STORE_KEY = "savior_custom_presets_v1";
+  const SESSION_STORE_KEY = "savior_render_sessions_v1";
+
+  function loadCustomPresets(){
+    try { return JSON.parse(localStorage.getItem(PRESET_STORE_KEY)) || []; }
+    catch(e){ return []; }
+  }
+  function saveCustomPresetsList(list){
+    try { localStorage.setItem(PRESET_STORE_KEY, JSON.stringify(list)); } catch(e){}
+  }
+  function loadRenderSessions(){
+    try { return JSON.parse(localStorage.getItem(SESSION_STORE_KEY)) || []; }
+    catch(e){ return []; }
+  }
+  function saveRenderSessionsList(list){
+    try { localStorage.setItem(SESSION_STORE_KEY, JSON.stringify(list)); } catch(e){}
+  }
+  function escapeHtml(str){
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderPresetList(){
+    const container = $("customPresetList");
+    if (!container) return;
+    const list = loadCustomPresets();
+    if (list.length === 0){
+      container.innerHTML = '<p class="history-empty">No saved presets yet.</p>';
+      return;
+    }
+    container.innerHTML = list.map(p =>
+      '<div class="history-row">' +
+        '<div class="history-row-main">' +
+          '<strong>' + escapeHtml(p.name) + '</strong>' +
+          '<span>' + new Date(p.createdAt).toLocaleDateString() + '</span>' +
+        '</div>' +
+        '<div class="history-row-actions">' +
+          '<button type="button" class="history-btn" data-load-preset="' + p.id + '">Load</button>' +
+          '<button type="button" class="history-btn danger" data-delete-preset="' + p.id + '">Delete</button>' +
+        '</div>' +
+      '</div>'
+    ).join("");
+  }
+
+  function renderSessionList(){
+    const container = $("sessionList");
+    if (!container) return;
+    const list = loadRenderSessions();
+    if (list.length === 0){
+      container.innerHTML = '<p class="history-empty">Nothing rendered yet.</p>';
+      return;
+    }
+    container.innerHTML = list.slice().reverse().map(s =>
+      '<div class="history-row">' +
+        '<div class="history-row-main">' +
+          '<strong>' + escapeHtml(s.preset) + '</strong>' +
+          '<span>' + new Date(s.at).toLocaleString() + ' &middot; ' + s.format.toUpperCase() + '</span>' +
+        '</div>' +
+      '</div>'
+    ).join("");
+  }
+
+  function snapshotFullChainState(){
+    return JSON.parse(JSON.stringify(P));
+  }
+
+  function restoreFullChainState(saved, presetName){
+    Object.keys(saved).forEach(key => {
+      if (P[key] && typeof P[key] === "object" && saved[key] && typeof saved[key] === "object"){
+        Object.assign(P[key], saved[key]);
+      }
+    });
+    activePresetName = presetName;
+    syncUIFromState();
+    highlightPreset(presetName);
+    restartIfPlaying();
+  }
+
+  function logRenderSession(format){
+    const list = loadRenderSessions();
+    list.push({ at: Date.now(), preset: activePresetName || "Custom", format: format });
+    while (list.length > 20) list.shift();
+    saveRenderSessionsList(list);
+  }
+
+  $("savePresetBtn").addEventListener("click", () => {
+    const nameInput = $("newPresetName");
+    const name = (nameInput.value || "").trim();
+    if (!name){ showToast("Give your preset a name first.", 2200); return; }
+    const list = loadCustomPresets();
+    list.push({ id: String(Date.now()), name: name, createdAt: Date.now(), params: snapshotFullChainState() });
+    saveCustomPresetsList(list);
+    nameInput.value = "";
+    renderPresetList();
+    showToast("Preset saved.", 2000);
+  });
+
+  $("customPresetList").addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const loadId = btn.dataset.loadPreset;
+    const delId = btn.dataset.deletePreset;
+    if (loadId){
+      const entry = loadCustomPresets().find(p => p.id === loadId);
+      if (entry){
+        restoreFullChainState(entry.params, entry.name);
+        showToast('Loaded "' + entry.name + '".', 2200);
+      }
+    } else if (delId){
+      if (!confirm("Delete this saved preset?")) return;
+      saveCustomPresetsList(loadCustomPresets().filter(p => p.id !== delId));
+      renderPresetList();
+    }
+  });
+
+  $("clearSessionsBtn").addEventListener("click", () => {
+    if (!confirm("Clear render history?")) return;
+    saveRenderSessionsList([]);
+    renderSessionList();
+  });
+
   function resetChainToDefaults(){
     // applyPreset("natural") covers eq/transient/comp/drive/stereo/reverb/limiter,
     // but hpf/gate/deesser aren't part of the preset objects here, so reset them by hand.
@@ -3289,6 +3466,7 @@
       setProgress(100);
       const filename = "savior-beatbox-master_" + activePresetName_or_custom() + "." + ext;
       downloadBlob(blob, filename);
+      logRenderSession(ext);
       setTimeout(() => { hideModal(); showToast("Render complete — download started.", 2800); }, 350);
     } catch (err){
       console.error(err);
@@ -3309,6 +3487,8 @@
   ========================================================== */
   highlightPreset(activePresetName);
   syncUIFromState();
+  renderPresetList();
+  renderSessionList();
 
 })();
 </script>
