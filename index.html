@@ -198,16 +198,45 @@
     padding:calc(20px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(100px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
   }
   #app[hidden]{display:none;}
-  header.top{
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:14px 2px; margin:-14px -2px 6px;
+  .sticky-head{
     position:sticky; top:0; z-index:20;
     background:rgba(10,9,16,.66);
     backdrop-filter:blur(14px) saturate(140%);
     -webkit-backdrop-filter:blur(14px) saturate(140%);
-    border-bottom:1px solid transparent;
-    transition:border-color .2s var(--ease), background .2s var(--ease);
+    border-bottom:1px solid var(--border);
   }
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 2px 10px;
+  }
+  .tabbar{display:flex; gap:6px; padding:0 2px 10px;}
+  .tab-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:10px 8px; border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--bg-card); color:var(--text-dim);
+    font-size:.82rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+    cursor:pointer; transition:background .15s ease, color .15s ease, opacity .15s ease;
+  }
+  .tab-btn.active{
+    background:linear-gradient(90deg, var(--purple-2), var(--magenta)); color:var(--bg); border-color:transparent;
+  }
+  .tab-btn:disabled{opacity:.4; cursor:not-allowed;}
+  .tab-btn:active:not(:disabled){transform:scale(.97);}
+  .tab-panel[hidden]{display:none;}
+  .compare-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .compare-btn{
+    flex:none; padding:10px 18px; border-radius:999px; border:1px solid var(--border-hi);
+    background:var(--bg-card); color:var(--text-dim); font-weight:600; font-size:.85rem;
+    cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .compare-btn.active{background:linear-gradient(90deg, var(--purple-2), var(--magenta)); color:var(--bg); border-color:transparent;}
+  #comparePlayBtn{
+    width:44px; height:44px; border-radius:50%; border:none; flex:none; margin-left:auto;
+    background:linear-gradient(145deg, var(--purple-bright), var(--purple-2)); color:var(--bg);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--glow);
+  }
+  #comparePlayBtn svg{width:18px; height:18px;}
+  .compare-note{font-size:.78rem; color:var(--text-dim); margin-top:12px; line-height:1.5;}
   .brand{display:flex; align-items:center; gap:12px;}
   .brand .mark{
     width:40px; height:40px; border-radius:11px; flex:none;
@@ -608,6 +637,7 @@
 <!-- ============ MAIN APP ============ -->
 <div id="app" hidden>
 
+  <div class="sticky-head">
   <header class="top">
     <div class="brand">
       <div class="mark">
@@ -620,6 +650,13 @@
     </div>
   </header>
 
+  <div class="tabbar" id="tabbar" role="tablist">
+    <button class="tab-btn active" data-tab="record" type="button" role="tab" aria-selected="true">Record</button>
+    <button class="tab-btn" data-tab="master" type="button" role="tab" aria-selected="false" disabled>Master</button>
+    <button class="tab-btn" data-tab="export" type="button" role="tab" aria-selected="false" disabled>Export</button>
+  </div>
+  </div>
+
   <div class="quick-actions">
     <button id="bugOverlayToggleBtn" class="quick-action-btn" type="button" aria-haspopup="dialog">
       <span>🐞</span><span>Found a bug?</span>
@@ -629,6 +666,7 @@
     </button>
   </div>
 
+  <div class="tab-panel" id="tabPanel-record" role="tabpanel">
   <!-- INPUT -->
   <section class="panel" id="inputSection">
     <h2><span class="num">1</span>Get Your Audio In</h2>
@@ -653,8 +691,17 @@
     <div id="currentFileName"></div>
   </section>
 
+  <footer class="tips">
+    <div class="tip">💡 <span>For best results, record using a dynamic microphone.</span></div>
+    <div class="tip" style="margin-top:8px;">🎙️ <span>If recording on a phone, make sure to record in a quiet environment and keep a consistent distance from the mic.</span></div>
+  </footer>
+
+  </div>
+
+  <div class="tab-panel" id="tabPanel-master" role="tabpanel" hidden>
+
   <!-- VISUALIZER -->
-  <section class="panel" id="visualizerSection" hidden>
+  <section class="panel" id="visualizerSection">
     <h2><span class="num">2</span>Waveform</h2>
     <div id="waveWrap">
       <canvas id="waveCanvas"></canvas>
@@ -674,7 +721,7 @@
   </section>
 
   <!-- PRESETS -->
-  <section class="panel" id="presetSection" hidden>
+  <section class="panel" id="presetSection">
     <h2><span class="num">3</span>Auto Mix Presets</h2>
     <div class="preset-row" id="presetRow">
       <button class="preset-btn" data-preset="raw">Raw<span class="desc">Bypass all</span></button>
@@ -687,7 +734,7 @@
   </section>
 
   <!-- SIGNAL CHAIN -->
-  <section class="panel" id="chainSection" hidden>
+  <section class="panel" id="chainSection">
     <h2><span class="num">4</span>Signal Chain</h2>
     <div id="chainRack">
 
@@ -897,8 +944,25 @@
     </div>
   </section>
 
+  </div>
+
+  <div class="tab-panel" id="tabPanel-export" role="tabpanel" hidden>
+
+  <section class="panel" id="compareSection">
+    <h2><span class="num">A/B</span>Before &amp; After</h2>
+    <div class="compare-row">
+      <button class="compare-btn active" id="compareMasteredBtn" type="button" data-mode="mastered">Mastered</button>
+      <button class="compare-btn" id="compareOriginalBtn" type="button" data-mode="original">Original</button>
+      <button id="comparePlayBtn" type="button" aria-label="Play/Pause compare">
+        <svg id="comparePlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="comparePauseIcon" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+      </button>
+    </div>
+    <div class="compare-note">Flip between your raw take and the full mastering chain before you commit to a render.</div>
+  </section>
+
   <!-- RENDER -->
-  <section class="panel" id="renderSection" hidden>
+  <section class="panel" id="renderSection">
     <h2><span class="num">5</span>Render &amp; Export</h2>
     <div class="render-row">
       <div class="format-group" role="group" aria-label="Export format">
@@ -911,10 +975,7 @@
     <div id="renderNote">WAV is uncompressed studio quality. MP3 encodes in-browser. AAC uses your browser's native encoder where supported, otherwise falls back to WAV.</div>
   </section>
 
-  <footer class="tips">
-    <div class="tip">💡 <span>For best results, record using a dynamic microphone.</span></div>
-    <div class="tip" style="margin-top:8px;">🎙️ <span>If recording on a phone, make sure to record in a quiet environment and keep a consistent distance from the mic.</span></div>
-  </footer>
+  </div>
 
 </div>
 
@@ -2158,10 +2219,9 @@
     playStartOffset = 0;
     peaksCache = null;
     $("currentFileName").textContent = label || "";
-    $("visualizerSection").hidden = false;
-    $("presetSection").hidden = false;
-    $("chainSection").hidden = false;
-    $("renderSection").hidden = false;
+    enableTab("master");
+    enableTab("export");
+    switchTab("master");
     $("durTime").textContent = formatTime(audioBuffer.duration);
     $("curTime").textContent = "0:00";
     resizeCanvases();
@@ -2169,6 +2229,38 @@
     applyPreset(activePresetName);
     showToast("Audio loaded — " + formatTime(audioBuffer.duration) + " ready to master.", 2600);
   }
+
+  /* ==========================================================
+     TABS — Record / Master / Export
+  ========================================================== */
+  const TAB_ORDER = ["record", "master", "export"];
+
+  function enableTab(name){
+    const btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+    if (btn) btn.disabled = false;
+  }
+
+  function switchTab(name){
+    const targetBtn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+    if (!targetBtn || targetBtn.disabled) return;
+    TAB_ORDER.forEach(t => {
+      const panel = $("tabPanel-" + t);
+      const btn = document.querySelector('.tab-btn[data-tab="' + t + '"]');
+      if (panel) panel.hidden = (t !== name);
+      if (btn){
+        btn.classList.toggle("active", t === name);
+        btn.setAttribute("aria-selected", t === name ? "true" : "false");
+      }
+    });
+    // Canvases render at 0-width while their tab is display:none, so re-measure
+    // and redraw once the Master tab is actually visible.
+    if (name === "master" && audioBuffer){ resizeCanvases(); drawStaticWaveform(); }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  });
 
   /* ==========================================================
      WAVEFORM DRAWING
@@ -2381,6 +2473,7 @@
     resetGRMeter();
     $("playIcon").hidden = false;
     $("pauseIcon").hidden = true;
+    if ($("comparePlayIcon")){ $("comparePlayIcon").hidden = false; $("comparePauseIcon").hidden = true; }
   }
 
   function startPlayback(fromOffset){
@@ -2439,6 +2532,7 @@
         liveGraph = null;
         $("playIcon").hidden = false;
         $("pauseIcon").hidden = true;
+        if ($("comparePlayIcon")){ $("comparePlayIcon").hidden = false; $("comparePauseIcon").hidden = true; }
         drawStaticWaveform();
       }
     };
@@ -2448,6 +2542,7 @@
     isPlaying = true;
     $("playIcon").hidden = true;
     $("pauseIcon").hidden = false;
+    if ($("comparePlayIcon")){ $("comparePlayIcon").hidden = true; $("comparePauseIcon").hidden = false; }
     if (!wasPlaying) tick();
   }
 
@@ -2474,6 +2569,7 @@
     isPlaying = false;
     $("playIcon").hidden = false;
     $("pauseIcon").hidden = true;
+    if ($("comparePlayIcon")){ $("comparePlayIcon").hidden = false; $("comparePauseIcon").hidden = true; }
     drawStaticWaveform();
     clearSpectrum();
     resetGRMeter();
@@ -2544,6 +2640,11 @@
     btn.classList.toggle("bypassed", on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
     btn.setAttribute("aria-label", on ? "A/B compare: currently hearing original unprocessed audio" : "A/B compare: currently hearing processed audio");
+    const origBtn = $("compareOriginalBtn"), masteredBtn = $("compareMasteredBtn");
+    if (origBtn && masteredBtn){
+      origBtn.classList.toggle("active", on);
+      masteredBtn.classList.toggle("active", !on);
+    }
     if (isPlaying && liveGraph && liveGraph.bypass){
       const now = audioCtx.currentTime;
       liveGraph.bypass.dryTap.gain.setTargetAtTime(on ? 1 : 0, now, 0.01);
@@ -2551,6 +2652,24 @@
     }
   }
   $("abToggleBtn").addEventListener("click", () => setABBypass(!abBypassOn));
+
+  function ensureComparePlaying(){
+    if (!audioBuffer) return;
+    if (!isPlaying){
+      const ready = audioCtx.state !== "running" ? audioCtx.resume() : Promise.resolve();
+      ready.finally(() => startPlayback(getCurrentTime()));
+    }
+  }
+  $("compareOriginalBtn").addEventListener("click", () => { setABBypass(true); ensureComparePlaying(); });
+  $("compareMasteredBtn").addEventListener("click", () => { setABBypass(false); ensureComparePlaying(); });
+  $("comparePlayBtn").addEventListener("click", () => {
+    if (!audioBuffer){ showToast("Load or record audio first.", 2200); return; }
+    if (isPlaying){ pausePlayback(); }
+    else {
+      const ready = audioCtx.state !== "running" ? audioCtx.resume() : Promise.resolve();
+      ready.finally(() => startPlayback(getCurrentTime()));
+    }
+  });
 
   // Compact clip indicator: peeks at the final output post-chain (post-limiter,
   // same signal reaching the speaker) and lights up briefly whenever a sample
